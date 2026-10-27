@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Balap Poin PID: Cerdas Cermat Alam Indonesia (Dual-Player)</title>
+    
+    <!-- Google Fonts & FontAwesome -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Quicksand:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Canvas Confetti Library -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <style>
+        :root {
+            --team1-color: #e74c3c;
+            --team1-dark: #c0392b;
+            --team1-light: #fadbd8;
+            --team2-color: #3498db;
+            --team2-dark: #2980b9;
+            --team2-light: #d6eaf8;
+            --coin-gold: #f1c40f;
+            --bg-dark: #1e272e;
+            --panel-bg: #2d3436;
+            --text-light: #f5f6fa;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Quicksand', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* SCREENS */
+        .screen {
+            display: none;
+            height: 100%;
+            width: 100%;
+        }
+
+        .screen.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ================= SETUP SCREEN ================= */
+        #screen-setup {
+            background: linear-gradient(135deg, #11998e, #38ef7d);
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .setup-card {
+            background: rgba(255, 255, 255, 0.95);
+            color: #2c3e50;
+            border-radius: 30px;
+            padding: 40px;
+            max-width: 900px;
+            width: 90%;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+            border: 5px solid #27ae60;
+        }
+
+        .setup-card h1 {
+            font-family: 'Fredoka', sans-serif;
+            font-size: 3rem;
+            color: #27ae60;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 0 shadow;
+        }
+
+        .setup-card p {
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+            color: #555;
+            font-weight: 700;
+        }
+
+        .teams-input-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .team-box-setup {
+            padding: 20px;
+            border-radius: 20px;
+            color: white;
+            text-align: left;
+        }
+
+        .team-box-setup.t1 { background: var(--team1-color); }
+        .team-box-setup.t2 { background: var(--team2-color); }
+
+        .team-box-setup label {
+            font-family: 'Fredoka', sans-serif;
+            font-size: 1.3rem;
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        .team-box-setup input {
+            width: 100%;
+            padding: 15px;
+            border-radius: 12px;
+            border: none;
+            font-size: 1.2rem;
+            font-weight: bold;
+            outline: none;
+        }
+
+        .btn-start-pid {
+            background: linear-gradient(to bottom, #f39c12, #e67e22);
+            color: white;
+            font-family: 'Fredoka', sans-serif;
+            font-size: 2.2rem;
+            padding: 18px 60px;
+            border: none;
+            border-radius: 60px;
+            cursor: pointer;
+            box-shadow: 0 8px 0 #b95b10, 0 15px 25px rgba(0,0,0,0.3);
+            transition: all 0.1s;
+        }
+
+        .btn-start-pid:active {
+            transform: translateY(6px);
+            box-shadow: 0 2px 0 #b95b10;
+        }
+
+        /* ================= GAMEPLAY PID LAYOUT ================= */
+        /* Top Banner & Track Header */
+        .pid-header {
+            background: var(--panel-bg);
+            padding: 12px 25px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            border-bottom: 4px solid #444;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+
+        .top-info-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .babak-tag {
+            background: #8e44ad;
+            color: white;
+            font-family: 'Fredoka', sans-serif;
+            font-size: 1.3rem;
+            padding: 6px 20px;
+            border-radius: 30px;
+            letter-spacing: 1px;
+        }
+
+        .global-timer {
+            font-family: 'Fredoka', sans-serif;
+            font-size: 2rem;
+            color: #e74c3c;
+            background: #000;
+            padding: 4px 25px;
+            border-radius: 20px;
+            border: 2px solid #e74c3c;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Realtime Race Tracks Top Banner */
+        .race-board {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            background: #1e272e;
+            padding: 10px;
+            border-radius: 16px;
+        }
+
+        .race-lane {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .lane-label {
+            width: 180px;
+            font-family: 'Fredoka', sans-serif;
+            font-size: 1.2rem;
+            font-weight: bold;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .track-bg {
+            flex: 1;
+            height: 32px;
+            background: #000;
+            border-radius: 16px;
+            position: relative;
+            overflow: hidden;
+            border: 2px solid #555;
+        }
+
+        .track-fill {
+            height: 100%;
+            width: 0%;
+            border-radius: 14px;
+            transition: width 0.4s ease-out;
+            position: relative;
+        }
+
+        .t1-fill { background: linear-gradient(90deg, #ff7675, #e74c3c); }
+        .t2-fill { background: linear-gradient(90deg, #74b9ff, #3498db); }
+
+        .racer-icon {
+            position: absolute;
+            right: 2px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.4rem;
+        }
+
+        .lane-score {
+            font-family: 'Fredoka', sans-serif;
+            font-size: 1.4rem;
+            color: var(--coin-gold);
+            width: 110px;
+            text-align: right;
+        }
+
+        /* SPLIT SCREEN MAIN PLAY AREA */
+        .split-container {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            background: #000;
+            padding: 6px;
+        }
+
+        .player-side {
+            background: #2d3436;
+            border-radius: 20px;
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+            position: relative;
+            border: 6px solid transparent;
+        }
+
+        .player-side.t1-side { border-color: var(--team1-color); }
+        .player-side.t2-side { border-color: var(--team2-color); }
+
+        .side-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 10px;
+            border-bottom: 2px dashed #444;
+            margin-bottom: 10px;
+        }
+
+        .side-title {
+            font-family: 'Fredoka', sans-serif;
+            font-size: 1.6rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .t1-color-text { color: var(--team1-color); }
+        .t2-color-text { color: var(--team2-color); }
+
+        /* Question Display Box */
+        .question-box {
+            background: #1e272e;
+            border-radius: 16px;
+            padding: 15px;
+            min-height: 110px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            margin-bottom: 15px;
+            border: 2px solid #444;
+        }
+
+        .question-box p {
+            font-size: 1.25rem;
+            font-weight: 700;
+            line-height: 1.4;
+            color: #fff;
+        }
+
+        /* PID Large Touch Buttons */
+        .options-grid-pid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            flex: 1;
+        }
+
+        .pid-opt-btn {
+            background: #3d464d;
+            border: 3px solid #555;
+            border-radius: 16px;
+            color: #fff;
+            padding: 12px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: all 0.1s;
+        }
+
+        .pid-opt-btn:active {
+            transform: scale(0.97);
+        }
+
+        .opt-tag {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: #1e272e;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Fredoka', sans-serif;
+            font-size: 1.3rem;
+            flex-shrink: 0;
+        }
+
+        .pid-opt-btn.correct {
+            background: #27ae60 !important;
+            border-color: #2ecc71 !important;
+            color: white !important;
+        }
+
+        .pid-opt-btn.wrong {
+            background: #c0392b !important;
+            border-color: #e74c3c !important;
+            color: white !important;
+        }
+
+        /* Side Feedback Overlay */
+        .side-feedback {
+            position: absolute;
+            bottom: 15px;
+            left: 15px;
+            right: 15px;
+            background: rgba(0,0,0,0.95);
+            border-radius: 16px;
+            padding: 15px;
+            text-align: center;
+            display: none;
+            animation: slideUp 0.3s ease-out;
+            z-index: 10;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .side-feedback h3 {
+            font-family: 'Fredoka', sans-serif;
+            font-size: 1.4rem;
+            margin-bottom: 5px;
+        }
+
+        .side-feedback p {
+            font-size: 0.95rem;
+            color: #ccc;
+        }
+
+        /* ================= PODIUM / RESULT SCREEN ================= */
+        #screen-result {
+            background: linear-gradient(135deg, #1e272e, #2d3436);
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .podium-box-pid {
+            background: #0f1418;
+            border: 4px solid var(--coin-gold);
+            border-radius: 30px;
+            padding: 30px;
+            width: 90%;
+            max-width: 1000px;
+            box-shadow: 0 0 50px rgba(241, 196, 15, 0.3);
+        }
+
+        .podium-display {
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            gap: 30px;
+            margin: 40px 0;
+            height: 250px;
+        }
+
+        .podium-pillar {
+            width: 220px;
+            border-radius: 20px 20px 0 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            padding-bottom: 15px;
+            font-family: 'Fredoka', sans-serif;
+            position: relative;
+        }
+
+        .podium-pillar.rank-1 {
+            height: 220px;
+            background: linear-gradient(to top, #f39c12, #f1c40f);
+            color: #5c3d00;
+        }
+
+        .podium-pillar.rank-2 {
+            height: 160px;
+            background: linear-gradient(to top, #7f8c8d, #bdc3c7);
+            color: #2c3e50;
+        }
+
+        .pillar-avatar {
+            font-size: 4rem;
+            position: absolute;
+            top: -65px;
+        }
+
+        .pillar-name {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .pillar-score {
+            font-size: 1.8rem;
+            color: #000;
+        }
+
+        /* NEXT BUTTON BANNER */
+        .bottom-control {
+            background: #111;
+            padding: 10px;
+            text-align: center;
+            border-top: 2px solid #333;
+        }
+
+        .btn-next-pid {
+            background: #27ae60;
+            color: white;
+            font-family: 'Fredoka', sans-serif;
+            font-size: 1.5rem;
+            padding: 10px 40px;
+            border: none;
+            border-radius: 40px;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #1e8449;
+            display: none;
+        }
+
+        .btn-next-pid:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 #1e8449;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 1. SETUP SCREEN -->
+    <div id="screen-setup" class="screen active">
+        <div class="setup-card">
+            <h1><i class="fa-solid fa-gamepad"></i> BALAP POIN PID DUAL-PLAY</h1>
+            <p>Game Cerdas Cermat IPAS Kelas 6 SD • Layar Sentuh Interaktif (Split Screen)</p>
+
+            <div class="teams-input-grid">
+                <div class="team-box-setup t1">
+                    <label><i class="fa-solid fa-tiger-face"></i> TIM SISI KIRI (TIM A)</label>
+                    <input type="text" id="t1-name" value="Tim Harimau 🐯">
+                </div>
+                <div class="team-box-setup t2">
+                    <label><i class="fa-solid fa-crow"></i> TIM SISI KANAN (TIM B)</label>
+                    <input type="text" id="t2-name" value="Tim Elang 🦅">
+                </div>
+            </div>
+
+            <button class="btn-start-pid" onclick="startPidGame()"><i class="fa-solid fa-play"></i> MULAI PERTANDINGAN</button>
+        </div>
+    </div>
+
+    <!-- 2. GAMEPLAY SCREEN (SPLIT SCREEN PID) -->
+    <div id="screen-play" class="screen">
+        <!-- TOP RACE TRACK BANNER -->
+        <div class="pid-header">
+            <div class="top-info-bar">
+                <div class="babak-tag" id="babak-tag">BABAK I: WAJIB (+10 POIN)</div>
+                <div style="font-size: 1.1rem; font-weight: bold; color: #aaa;" id="q-counter">Soal 1 / 80</div>
+                <div class="global-timer">
+                    <i class="fa-solid fa-stopwatch"></i>
+                    <span id="timer-val">10</span>s
+                </div>
+            </div>
+
+            <div class="race-board">
+                <!-- Track Team 1 -->
+                <div class="race-lane">
+                    <div class="lane-label t1-color-text" id="t1-label">Tim Harimau 🐯</div>
+                    <div class="track-bg">
+                        <div class="track-fill t1-fill" id="t1-bar">
+                            <span class="racer-icon">🐯</span>
+                        </div>
+                    </div>
+                    <div class="lane-score" id="t1-score-disp">0 Poin</div>
+                </div>
+                <!-- Track Team 2 -->
+                <div class="race-lane">
+                    <div class="lane-label t2-color-text" id="t2-label">Tim Elang 🦅</div>
+                    <div class="track-bg">
+                        <div class="track-fill t2-fill" id="t2-bar">
+                            <span class="racer-icon">🦅</span>
+                        </div>
+                    </div>
+                    <div class="lane-score" id="t2-score-disp">0 Poin</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SPLIT SCREEN INTERACTIVE PLAYERS AREA -->
+        <div class="split-container">
+            <!-- LEFT SIDE: TEAM 1 -->
+            <div class="player-side t1-side">
+                <div class="side-header">
+                    <div class="side-title t1-color-text" id="t1-side-name">Tim Harimau 🐯</div>
+                    <div style="font-size: 0.9rem; color: #aaa;">SISI KIRI</div>
+                </div>
+
+                <div class="question-box">
+                    <p id="t1-q-text">Teks soal akan muncul di sini...</p>
+                </div>
+
+                <div class="options-grid-pid" id="t1-opts">
+                    <!-- Option buttons team 1 dynamically inserted -->
+                </div>
+
+                <div class="side-feedback" id="t1-fb">
+                    <h3 id="t1-fb-title">BENAR!</h3>
+                    <p id="t1-fb-text">Penjelasan materi.</p>
+                </div>
+            </div>
+
+            <!-- RIGHT SIDE: TEAM 2 -->
+            <div class="player-side t2-side">
+                <div class="side-header">
+                    <div class="side-title t2-color-text" id="t2-side-name">Tim Elang 🦅</div>
+                    <div style="font-size: 0.9rem; color: #aaa;">SISI KANAN</div>
+                </div>
+
+                <div class="question-box">
+                    <p id="t2-q-text">Teks soal akan muncul di sini...</p>
+                </div>
+
+                <div class="options-grid-pid" id="t2-opts">
+                    <!-- Option buttons team 2 dynamically inserted -->
+                </div>
+
+                <div class="side-feedback" id="t2-fb">
+                    <h3 id="t2-fb-title">BENAR!</h3>
+                    <p id="t2-fb-text">Penjelasan materi.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- BOTTOM CONTROL PANEL -->
+        <div class="bottom-control">
+            <button class="btn-next-pid" id="btn-next-round" onclick="nextRound()"><i class="fa-solid fa-arrow-right"></i> SOAL BERIKUTNYA</button>
+        </div>
+    </div>
+
+    <!-- 3. RESULT SCREEN -->
+    <div id="screen-result" class="screen">
+        <div class="podium-box-pid">
+            <h1 style="font-family:'Fredoka',sans-serif; font-size:3rem; color:var(--coin-gold);"><i class="fa-solid fa-trophy"></i> PEMENANG BALAP POIN!</h1>
+            <p style="color:#aaa; font-size:1.2rem; margin-top:5px;">Selamat kepada tim terbaik pelestari alam Indonesia!</p>
+
+            <div class="podium-display" id="podium-display">
+                <!-- Dynamic Podium Pillars -->
+            </div>
+
+            <button class="btn-start-pid" onclick="location.reload()" style="margin-top:20px; font-size:1.5rem; padding:12px 40px;">
+                <i class="fa-solid fa-rotate-right"></i> Main Lagi
+            </button>
+        </div>
+    </div>
+
+<script>
+    /* ==========================================================================
+       DATA 80 SOAL CERDAS CERMAT IPAS FASE C KELAS 6 SD
+       ========================================================================== */
+    const rawQuestions = [
+        // --- BABAK I: WAJIB (40 Soal) - +10 Poin, 10 Detik ---
+        // Karhutla
+        { babak: 1, text: "Apa kepanjangan dari istilah Karhutla?", options: ["Kebakaran hutan dan lahan", "Kerusakan hutan dan lingkungan", "Kebakaran tata ruang hutan", "Keragaman hutan dan lahan"], ans: 0, fb: "Karhutla singkatan dari Kebakaran Hutan dan Lahan." },
+        { babak: 1, text: "Jenis tanah kaya bahan organik yang mudah membara di bawah tanah saat kering adalah...", options: ["Tanah Liat", "Tanah Gambut", "Tanah Kapur", "Tanah Pasir"], ans: 1, fb: "Lahan gambut sangat rawan membara hingga bawah permukaan saat musim kemarau." },
+        { babak: 1, text: "Mengapa api di lahan gambut sangat sulit dipadamkan?", options: ["Api menjalar di bawah tanah", "Gambut mengandung es", "Gambut tak bisa disiram", "Asap gambut bening"], ans: 0, fb: "Api di gambut berada di bawah tanah (smoldering) sehingga butuh pembasahan total." },
+        { babak: 1, text: "Istilah titik panas yang terdeteksi satelit pemantau kebakaran adalah...", options: ["Hotspot", "Warmzone", "Firepoint", "Redzone"], ans: 0, fb: "Hotspot adalah indikasi suhu panas tinggi di permukaan bumi." },
+        { babak: 1, text: "Musim apakah yang memicu tingginya risiko Karhutla di Indonesia?", options: ["Musim Hujan", "Musim Kemarau", "Musim Pancaroba", "Musim Angin"], ans: 1, fb: "Kemarau membuat daun dan semak sangat kering dan mudah terbakar." },
+        { babak: 1, text: "Kepanjangan dari gangguan kesehatan ISPA akibat asap kebakaran adalah...", options: ["Infeksi Saluran Pernapasan Akut", "Ikatan Saluran Paru Anak", "Infeksi Sistem Pencernaan Akut", "Indikator Kualitas Udara"], ans: 0, fb: "ISPA adalah Infeksi Saluran Pernapasan Akut." },
+        { babak: 1, text: "Berapa luas lahan terbakar di Indonesia Jan-Agu 2026 berdasarkan data?", options: ["100.000 ha", "202.010,96 ha", "500.000 ha", "50.000 ha"], ans: 1, fb: "Data mencatat luas kebakaran mencapai 202.010,96 hektare." },
+        { babak: 1, text: "Indeks resmi pengukur tingkat pencemaran kualitas udara dinamakan...", options: ["BMKG", "ISPU", "IQA", "AMDAL"], ans: 1, fb: "ISPU adalah Indeks Standar Pencemar Udara." },
+        { babak: 1, text: "Dampak langsung kabut asap pada saluran pernapasan manusia adalah...", options: ["Sesak napas & batuk", "Sakit gigi", "Patah tulang", "Gatal permanent"], ans: 0, fb: "Partikel halus kabut asap memicu iritasi saluran pernapasan." },
+        { babak: 1, text: "Sikap tepat jika siswa melihat titik api di sekitar lingkungan sekolah/hutan adalah...", options: ["Mendekat untuk foto", "Segera melapor ke guru/petugas", "Membiarkannya saja", "Menyiram pakai sedotan"], ans: 1, fb: "Melapor kepada orang dewasa adalah tindakan paling aman." },
+
+        // Banjir & Banjir Bandang
+        { babak: 1, text: "Fenomena meluapnya air hingga menggenangi daratan yang biasanya kering disebut...", options: ["Banjir", "Tsunami", "Abrasi", "Erosi"], ans: 0, fb: "Banjir terjadi saat daya tampung air terlampaui." },
+        { babak: 1, text: "Banjir yang datang mendadak dengan arus air sangat deras dan berbahaya disebut...", options: ["Banjir pasang", "Banjir bandang", "Banjir rob", "Banjir lokal"], ans: 1, fb: "Banjir bandang membawa volume air dan lumpur yang sangat kuat." },
+        { babak: 1, text: "Proses masuk dan meresapnya air hujan ke dalam tanah disebut...", options: ["Evaporasi", "Infiltrasi", "Kondensasi", "Sedimentasi"], ans: 1, fb: "Infiltrasi membantu menyerap air hujan menjadi air tanah." },
+        { babak: 1, text: "Pengendapan lumpur atau pasir di dasar sungai dinamakan...", options: ["Erosi", "Sedimentasi", "Reboisasi", "Evakuasi"], ans: 1, fb: "Sedimentasi menyebabkan pendangkalan alur sungai." },
+        { babak: 1, text: "Kepanjangan dari istilah DAS dalam pengelolaan air adalah...", options: ["Daerah Aliran Sungai", "Danau Dan Air Kering", "Daya Alir Dampak Sampah", "Dinding Arus Sungai"], ans: 0, fb: "DAS adalah Daerah Aliran Sungai." },
+        { babak: 1, text: "Upaya memindahkan warga dari daerah rawan ke lokasi aman saat bencana disebut...", options: ["Mitigasi", "Evakuasi", "Adaptasi", "Konservasi"], ans: 1, fb: "Evakuasi bertujuan menyelamatkan jiwa." },
+        { babak: 1, text: "Penyebab utama yang memperparah bahaya banjir di pemukiman adalah...", options: ["Pembersihan selokan", "Saluran tersumbat sampah & penggundulan pohon", "Sumur resapan", "Reboisasi"], ans: 1, fb: "Sampah menyumbat drainase dan memicu genangan air." },
+        { babak: 1, text: "Lembaga pemerintah penanggung jawab ramalan cuaca & peringatan bencana adalah...", options: ["BASARNAS", "BMKG", "KPK", "BPOM"], ans: 1, fb: "BMKG (Badan Meteorologi, Klimatologi, dan Geofisika)." },
+        { babak: 1, text: "Segala bentuk kegiatan untuk mengurangi dampak risiko bencana disebut...", options: ["Mitigasi", "Simulasi", "Evolusi", "Rehabilitasi"], ans: 0, fb: "Mitigasi adalah tindakan pengurangan risiko bencana." },
+        { babak: 1, text: "Alasan utama dilarang keras menyeberangi arus banjir bandang adalah...", options: ["Arus sangat deras & bisa hanyutkan manusia", "Baju basah", "Sandal hanyut", "Air jadi keruh"], ans: 0, fb: "Arus banjir bandang berdaya dorong sangat mematikan." },
+
+        // Sampah & Pengelolaan
+        { babak: 1, text: "Sisa buah, sayuran, dan daun yang mudah membusuk tergolong sampah...", options: ["Anorganik", "Organik", "B3", "Sintetis"], ans: 1, fb: "Sampah organik berasal dari sisa makhluk hidup." },
+        { babak: 1, text: "Pupuk alami dari hasil penguraian bahan organik disebut...", options: ["Pupuk Kimia", "Kompos", "Urea", "NPK"], ans: 1, fb: "Kompos sangat subur dan ramah lingkungan." },
+        { babak: 1, text: "Partikel plastik berbahaya berukuran kurang dari 5 mm dinamakan...", options: ["Makroplastik", "Mikroplastik", "Nanotube", "Plastisol"], ans: 1, fb: "Mikroplastik meracuni rantai makanan perairan." },
+        { babak: 1, text: "Kepanjangan dari TPA dalam pengelolaan sampah warga adalah...", options: ["Tempat Pemrosesan Akhir", "Taman Penampungan Asri", "Tempat Pengangkut Angkutan", "Timbunan Plastik"], ans: 0, fb: "TPA singkatan dari Tempat Pemrosesan Akhir." },
+        { babak: 1, text: "Dalam konsep 5R, kata 'Reduce' berarti...", options: ["Mengurangi sampah", "Menggunakan kembali", "Mendaur ulang", "Menolak plastik"], ans: 0, fb: "Reduce adalah mengurangi penggunaan potensi sampah." },
+        { babak: 1, text: "Dalam konsep 5R, kata 'Reuse' berarti...", options: ["Menggunakan kembali", "Mendaur ulang", "Membuat kompos", "Mengurangi"], ans: 0, fb: "Reuse memakai barang kembali tanpa mengolah ulang." },
+        { babak: 1, text: "Dalam konsep 5R, kata 'Recycle' berarti...", options: ["Mendaur ulang jadi barang baru", "Menolak plastik", "Menimbun", "Membakar"], ans: 0, fb: "Recycle mendaur ulang fisik/kimia bahan bekas." },
+        { babak: 1, text: "Fasilitas tempat penukaran sampah terpilah menjadi tabungan bernilai uang adalah...", options: ["Koperasi Sampah", "Bank Sampah", "Pasar Sampah", "Pos Penampungan"], ans: 1, fb: "Bank sampah bernilai ekonomi bagi lingkungan." },
+        { babak: 1, text: "Gas rumah kaca yang dihasilkan pembusukan sampah organik di TPA adalah...", options: ["Gas Metana", "Gas Oksigen", "Gas Nitrogen", "Gas Helium"], ans: 0, fb: "Gas metana memicu pemicu pemanasan global." },
+        { babak: 1, text: "Dampak langsung membuang sampah ke dalam sungai/selokan adalah...", options: ["Air jernih", "Saluran mampet & memicu banjir", "Ikan makin banyak", "Tanah subur"], ans: 1, fb: "Sampah menyumbat aliran air sungai." },
+
+        // Ekosistem & Rantai Makanan
+        { babak: 1, text: "Seluruh komponen makhluk hidup di dalam ekosistem disebut...", options: ["Abiotik", "Biotik", "Bioma", "Biosfer"], ans: 1, fb: "Biotik adalah komponen makhluk hidup." },
+        { babak: 1, text: "Komponen tidak hidup seperti air, tanah, dan udara disebut...", options: ["Biotik", "Abiotik", "Organik", "Biologi"], ans: 1, fb: "Abiotik adalah elemen non-hidup fisik." },
+        { babak: 1, text: "Makhluk hidup yang mampu membuat makanan sendiri dinamakan...", options: ["Konsumen", "Produsen", "Pengurai", "Predator"], ans: 1, fb: "Tumbuhan hijau bertindak sebagai produsen." },
+        { babak: 1, text: "Proses tumbuhan hijau memasak makanan dengan bantuan cahaya dinamakan...", options: ["Respirasi", "Fotosintesis", "Transpirasi", "Oksidasi"], ans: 1, fb: "Fotosintesis menghasilkan gula dan oksigen." },
+        { babak: 1, text: "Rantai: Rumput → Belalang → Katak → Ular. Hewan Konsumen I adalah...", options: ["Rumput", "Belalang", "Katak", "Ular"], ans: 1, fb: "Belalang memakan produsen langsung." },
+        { babak: 1, text: "Dalam rantai makanan di atas, hewan bertindak sebagai Konsumen II adalah...", options: ["Belalang", "Katak", "Ular", "Rumput"], ans: 1, fb: "Katak memakan Konsumen I (Belalang)." },
+        { babak: 1, text: "Organisme yang menguraikan bangkai makhluk hidup menjadi hara tanah adalah...", options: ["Produsen", "Pengurai (Dekomposer)", "Konsumen", "Herbivora"], ans: 1, fb: "Pengurai (jamur/bakteri) mengembalikan nutrisi ke tanah." },
+        { babak: 1, text: "Kumpulan dari beberapa rantai makanan yang saling terhubung dinamakan...", options: ["Jaring-jaring makanan", "Daftar makanan", "Piramida hewan", "Siklus hidup"], ans: 0, fb: "Jaring-jaring makanan menggambarkan ekosistem kompleks." },
+        { babak: 1, text: "Arti tanda panah (→) pada diagram rantai makanan menyatakan...", options: ["Aliran energi / dimakan oleh", "Arah lari hewan", "Tempat tinggal", "Jumlah keturunan"], ans: 0, fb: "Panah menunjuk ke arah pemakan (penerima energi)." },
+        { babak: 1, text: "Tempat tinggal alami bagi suatu makhluk hidup dinamakan...", options: ["Komunitas", "Habitat", "Populasi", "Ekologi"], ans: 1, fb: "Habitat tempat hidup alami spesies." },
+
+        // --- BABAK II: LEMPARAN (20 Soal) - +20 Poin, 10 Detik ---
+        { babak: 2, text: "Tujuan utama menjaga lahan gambut agar tetap basah adalah...", options: ["Mencegah kebakaran bawah tanah", "Bisa untuk renang", "Agar pohon mati", "Agar air laut masuk"], ans: 0, fb: "Gambut basah tidak akan mudah membara." },
+        { babak: 2, text: "Hotspot tidak selalu berarti api membakar karena...", options: ["Hotspot adalah indikasi suhu permukaan tinggi", "Satelit sering salah", "Hotspot kumpulan air", "Hanya foto awan"], ans: 0, fb: "Hotspot adalah indikator suhu tinggi berisiko." },
+        { babak: 2, text: "Karhutla yang meluas berdampak langsung pada kualitas udara yaitu...", options: ["Kualitas udara buruk & berbahaya", "Udara makin segar", "Oksigen bertambah", "Tidak berpengaruh"], ans: 0, fb: "Asap Karhutla menurunkan Indeks Kualitas Udara." },
+        { babak: 2, text: "Penggundulan hutan memicu erosi karena...", options: ["Akar pengikat tanah berkurang", "Tanah jadi batu", "Pohon menyerap batu", "Daun menahan air"], ans: 0, fb: "Akar pohon berfungsi mengikat partikel tanah." },
+        { babak: 2, text: "Perbedaan deforestasi dan degradasi hutan adalah...", options: ["Deforestasi hilangnya hutan, degradasi penurunan kualitas", "Keduanya sama", "Deforestasi penanaman", "Degradasi membesar"], ans: 0, fb: "Deforestasi memotong tutupan, degradasi merusak fungsi." },
+        { babak: 2, text: "Kegiatan penanaman kembali kawasan hutan yang gundul dinamakan...", options: ["Reboisasi", "Rehabilitasi", "Erosi", "Irigation"], ans: 0, fb: "Reboisasi hijaukan kembali hutan gundul." },
+        { babak: 2, text: "Pendangkalan sungai akibat sedimentasi memperparah banjir karena...", options: ["Daya tampung air sungai berkurang", "Air jadi dingin", "Arus lebih cepat", "Sungai makin lebar"], ans: 0, fb: "Dasar sungai dangkal membuat air cepat meluap." },
+        { babak: 2, text: "Daerah resapan air di perkotaan sangat penting untuk...", options: ["Menyerap air hujan ke tanah", "Membuat kota dingin", "Membuat kolam", "Menghilangkan jalan"], ans: 0, fb: "Resapan air kurangi limpasan genangan." },
+        { babak: 2, text: "Sampah plastik di laut sangat berbahaya bagi hewan laut karena...", options: ["Tertelan & menjerat hewan", "Plastik bikin manis", "Hewan suka main", "Tempat bertelur"], ans: 0, fb: "Penyu/ikan mengira plastik makanan." },
+        { babak: 2, text: "Membawa botol minum isi ulang (tumbler) bermanfaat untuk...", options: ["Mengurangi sampah sekali pakai", "Lebih berat", "Air hangat", "Harganya mahal"], ans: 0, fb: "Tumbler mengurangi timbulan botol plastik." },
+        { babak: 2, text: "Perbedaan utama antara cuaca dan iklim adalah...", options: ["Cuaca harian/singkat, iklim jangka panjang", "Cuaca di laut", "Cuaca panas", "Keduanya sama"], ans: 0, fb: "Iklim diukur dalam rentang waktu puluhan tahun." },
+        { babak: 2, text: "Gas rumah kaca dari pembakaran fosil pabrik/kendaraan adalah...", options: ["Karbon dioksida (CO₂)", "Oksigen", "Nitrogen", "Hidrogen"], ans: 0, fb: "CO2 menjebak radiasi panas bumi." },
+        { babak: 2, text: "Tindakan memotong/mengurangi penyebab perubahan iklim disebut...", options: ["Mitigasi iklim", "Adaptasi iklim", "Evolusi iklim", "Prediksi"], ans: 0, fb: "Mitigasi kurangi emisi gas rumah kaca." },
+        { babak: 2, text: "Menyiapkan rute evakuasi warga saat terjadi banjir adalah contoh...", options: ["Adaptasi iklim", "Mitigasi iklim", "Eksploitasi", "Reboisasi"], ans: 0, fb: "Adaptasi bentuk penyesuaian hadapi ancaman." },
+        { babak: 2, text: "Tumbuhan hijau disebut produsen ekosistem karena...", options: ["Mampu fotosintesis buat makanan", "Memakan ulat", "Menguraikan sampah", "Buat tanah"], ans: 0, fb: "Produsen hasilkan zat makanan sendiri." },
+        { babak: 2, text: "Jika populasi ulat di taman habis, dampak pada burung pemakan ulat adalah...", options: ["Jumlahnya berkurang", "Bertambah banyak", "Makan rumput", "Tidak berpengaruh"], ans: 0, fb: "Burung kehilangan pasokan energi makanan." },
+        { babak: 2, text: "Aliran energi semakin berkurang pada tingkat konsumen atas karena...", options: ["Terpakai untuk aktivitas hidup", "Hilang terbakar", "Hewan mengecil", "Disimpan di tanah"], ans: 0, fb: "Energi terpakai bernapas & bergerak." },
+        { babak: 2, text: "Burung pemakan buah sangat membantu hutan karena...", options: ["Menyebar biji tumbuhan", "Menyiram pohon", "Memberi pupuk", "Membuat angin"], ans: 0, fb: "Kotoran burung membawa biji ke area baru." },
+        { babak: 2, text: "Kebakaran hutan merusak jaring makanan karena...", options: ["Sumber makanan & tempat tinggal hancur", "Hewan berkembang biak", "Asap tutup matahari", "Semua produsen"], ans: 0, fb: "Karhutla memutus mata rantai makanan." },
+        { babak: 2, text: "Pemulihan alami ekosistem hutan terbakar butuh waktu lama sebab...", options: ["Pertumbuhan rantai ekologi butuh waktu", "Tanah jadi batu", "Hewan tak mau kembali", "Hujan berhenti"], ans: 0, fb: "Keanekaragaman hayati butuh bertahun-tahun." },
+
+        // --- BABAK III: REBUTAN (20 Soal) - +20 Poin, Salah -10 Poin, 8 Detik ---
+        { babak: 3, text: "Gambut tak berapi tapi terus berasap tebal. Apa sebabnya?", options: ["Api membakar di bawah tanah", "Orang bakar sampah", "Uap air gambut", "Napas pohon"], ans: 0, fb: "Kebakaran gambut sering berupa smoldering di bawah tanah." },
+        { babak: 3, text: "Hutan terbakar habis. Kelompok mana yang langsung kehilangan makanan?", options: ["Konsumen I (Herbivor)", "Pengurai", "Predator puncak", "Karnivora II"], ans: 0, fb: "Herbivor kehilangan langsung produsen." },
+        { babak: 3, text: "Rantai: Daun → Ulat → Burung → Ular. Jika ulat punah, siapa terdampak?", options: ["Burung", "Ular", "Daun", "Pengurai"], ans: 0, fb: "Burung pemakan ulat kehilangan pakan." },
+        { babak: 3, text: "Rantai: Rumput → Belalang → Katak → Ular. Jika katak ditangkap, populasi hewan apa melonjak?", options: ["Belalang", "Ular", "Rumput", "Elang"], ans: 0, fb: "Belalang tak ada lagi pemangsanya." },
+        { babak: 3, text: "Dalam rantai makanan di atas, jika ular diburu habis, populasi hewan apa melonjak?", options: ["Katak", "Belalang", "Rumput", "Padi"], ans: 0, fb: "Katak bebas berkembang biak tanpa ular." },
+        { babak: 3, text: "Proses penggundulan tutupan pohon hutan dinamakan...", options: ["Deforestasi", "Reboisasi", "Degradasi", "Rehabilitasi"], ans: 0, fb: "Deforestasi hilangkan tutupan hutan." },
+        { babak: 3, text: "Hutan ada pohonnya tapi fungsi ekologi rusak. Disebut...", options: ["Degradasi hutan", "Deforestasi", "Konservasi", "Agraria"], ans: 0, fb: "Degradasi penurunan kualitas fungsi hutan." },
+        { babak: 3, text: "Selokan tersumbat sampah saat hujan deras memicu bencana...", options: ["Banjir", "Karhutla", "Gempa", "Tsunami"], ans: 0, fb: "Drainase mampet memicu luapan banjir." },
+        { babak: 3, text: "Pengikisan tanah lereng oleh air hujan dinamakan...", options: ["Erosi", "Sedimentasi", "Infiltrasi", "Evaporasi"], ans: 0, fb: "Erosi terjadi karena tidak ada penahan akar." },
+        { babak: 3, text: "Pengendapan abu & lumpur di dasar sungai dinamakan...", options: ["Sedimentasi", "Erosi", "Reboisasi", "Kondensasi"], ans: 0, fb: "Sedimentasi akibatkan dangkalnya sungai." },
+        { babak: 3, text: "Mengolah sampah daun jadi kompos merupakan prinsip 5R...", options: ["Rot (Kompos)", "Refuse", "Recycle", "Reduce"], ans: 0, fb: "Rot adalah membusukkan sisa organik." },
+        { babak: 3, text: "Siswa tegas menolak sedotan plastik. Ini prinsip 5R...", options: ["Refuse (Menolak)", "Reuse", "Recycle", "Repair"], ans: 0, fb: "Refuse artinya menolak barang sekali pakai." },
+        { babak: 3, text: "Botol bekas dilebur jadi pot bunga baru adalah prinsip 5R...", options: ["Recycle (Daur ulang)", "Reduce", "Reuse", "Refuse"], ans: 0, fb: "Recycle melibatkan olah fisik bahan baru." },
+        { babak: 3, text: "Pembangunan sirene peringatan bencana cuaca adalah tindakan...", options: ["Adaptasi iklim", "Mitigasi iklim", "Eksploitasi", "Deforestasi"], ans: 0, fb: "Adaptasi siapkan ketahanan bencana." },
+        { babak: 3, text: "Naik sepeda kurangi emisi asap kendaraan adalah tindakan...", options: ["Mitigasi iklim", "Adaptasi iklim", "Degradasi", "Infiltrasi"], ans: 0, fb: "Mitigasi memotong sumber emisi." },
+        { babak: 3, text: "Gas utama hasil pembakaran fosil penjebak panas bumi adalah...", options: ["Karbon dioksida (CO₂)", "Oksigen", "Helium", "Ozon"], ans: 0, fb: "CO2 pemicu efek rumah kaca utama." },
+        { babak: 3, text: "Burung pemakan buah sangat penting bagi hutan karena...", options: ["Menyebar biji tanaman", "Makan ulat", "Usir penebang", "Menyiram"], ans: 0, fb: "Biji dalam kotoran tumbuh jadi pohon baru." },
+        { babak: 3, text: "Jika mikroba pengurai punah, proses alam yang berhenti adalah...", options: ["Penguraian sampah & daur hara", "Fotosintesis", "Terjadi hujan", "Angin"], ans: 0, fb: "Tanpa pengurai sampah menumpuk abadi." },
+        { babak: 3, text: "Beberapa rantai makanan yang saling berhubungan membentuk...", options: ["Jaring-jaring makanan", "Piramida energi", "Ekosistem buatan", "Populasi"], ans: 0, fb: "Jaring makanan adalah gabungan rantai makanan." },
+        { babak: 3, text: "Karhutla merusak tempat tinggal & pakan hewan. Dua elemen itu adalah...", options: ["Habitat & sumber makanan", "Oksigen & tanah", "Iklim & cuaca", "Suhu & air"], ans: 0, fb: "Satwa kehilangan rumah & makanan." }
+    ];
+
+    /* ==========================================================================
+       DUAL PLAYER GAME ENGINE (PID SPLIT SCREEN)
+       ========================================================================== */
+    let teams = [
+        { name: "Tim Harimau 🐯", score: 0, color: "var(--team1-color)", answered: false, choice: null },
+        { name: "Tim Elang 🦅", score: 0, color: "var(--team2-color)", answered: false, choice: null }
+    ];
+
+    let currentQIndex = 0;
+    let timerInterval = null;
+    let timeLeft = 10;
+    let choicesT1 = [];
+    let choicesT2 = [];
+
+    function startPidGame() {
+        teams[0].name = document.getElementById('t1-name').value || "Tim Harimau 🐯";
+        teams[1].name = document.getElementById('t2-name').value || "Tim Elang 🦅";
+
+        document.getElementById('t1-label').textContent = teams[0].name;
+        document.getElementById('t2-label').textContent = teams[1].name;
+        document.getElementById('t1-side-name').textContent = teams[0].name;
+        document.getElementById('t2-side-name').textContent = teams[1].name;
+
+        teams[0].score = 0;
+        teams[1].score = 0;
+        currentQIndex = 0;
+
+        showScreen('screen-play');
+        updateScoresUI();
+        loadQuestionPID();
+    }
+
+    function showScreen(id) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+    }
+
+    function updateScoresUI() {
+        document.getElementById('t1-score-disp').textContent = `${teams[0].score} Poin`;
+        document.getElementById('t2-score-disp').textContent = `${teams[1].score} Poin`;
+
+        const maxScoreEst = 1000;
+        const bar1 = Math.min(100, Math.max(0, (teams[0].score / maxScoreEst) * 100));
+        const bar2 = Math.min(100, Math.max(0, (teams[1].score / maxScoreEst) * 100));
+
+        document.getElementById('t1-bar').style.width = `${bar1}%`;
+        document.getElementById('t2-bar').style.width = `${bar2}%`;
+    }
+
+    function loadQuestionPID() {
+        if (currentQIndex >= rawQuestions.length) {
+            endGamePID();
+            return;
+        }
+
+        const q = rawQuestions[currentQIndex];
+        teams[0].answered = false; teams[0].choice = null;
+        teams[1].answered = false; teams[1].choice = null;
+
+        document.getElementById('btn-next-round').style.display = 'none';
+        document.getElementById('t1-fb').style.display = 'none';
+        document.getElementById('t2-fb').style.display = 'none';
+
+        // Babak Settings
+        const babakTag = document.getElementById('babak-tag');
+        if (q.babak === 1) {
+            babakTag.textContent = "BABAK I: WAJIB (+10 POIN)";
+            babakTag.style.background = "#27ae60";
+            timeLeft = 10;
+        } else if (q.babak === 2) {
+            babakTag.textContent = "BABAK II: LEMPARAN (+20 POIN)";
+            babakTag.style.background = "#3498db";
+            timeLeft = 10;
+        } else {
+            babakTag.textContent = "BABAK III: REBUTAN (+20 / -10 POIN)";
+            babakTag.style.background = "#e74c3c";
+            timeLeft = 8;
+        }
+
+        document.getElementById('q-counter').textContent = `Soal ${currentQIndex + 1} / ${rawQuestions.length}`;
+        document.getElementById('t1-q-text').textContent = q.text;
+        document.getElementById('t2-q-text').textContent = q.text;
+
+        // Choices for both sides (Shuffled)
+        const prefixes = ['A', 'B', 'C', 'D'];
+        
+        // Prepare choices
+        choicesT1 = q.options.map((opt, idx) => ({ text: opt, isCorrect: idx === q.ans }));
+        choicesT1.sort(() => Math.random() - 0.5);
+
+        choicesT2 = [...choicesT1]; // Same option positions for fairness
+
+        renderSideOptions(0, choicesT1, 't1-opts', prefixes);
+        renderSideOptions(1, choicesT2, 't2-opts', prefixes);
+
+        startTimerPID();
+    }
+
+    function renderSideOptions(teamIdx, choices, containerId, prefixes) {
+        const container = document.getElementById(containerId);
+        container.innerHTML = '';
+
+        choices.forEach((choice, idx) => {
+            const btn = document.createElement('button');
+            btn.className = 'pid-opt-btn';
+            btn.innerHTML = `
+                <div class="opt-tag">${prefixes[idx]}</div>
+                <div>${choice.text}</div>
+            `;
+            btn.onclick = () => submitSideAnswer(teamIdx, choice, btn, choices, containerId);
+            container.appendChild(btn);
+        });
+    }
+
+    function startTimerPID() {
+        clearInterval(timerInterval);
+        document.getElementById('timer-val').textContent = timeLeft;
+
+        timerInterval = setInterval(() => {
+            timeLeft--;
+            document.getElementById('timer-val').textContent = timeLeft;
+            if (timeLeft <= 0) {
+                clearInterval(timerInterval);
+                evaluateRoundTimeout();
+            }
+        }, 1000);
+    }
+
+    function submitSideAnswer(teamIdx, choice, btn, choices, containerId) {
+        if (teams[teamIdx].answered) return;
+
+        teams[teamIdx].answered = true;
+        teams[teamIdx].choice = choice;
+
+        // Disable buttons for this side
+        const container = document.getElementById(containerId);
+        const btns = container.querySelectorAll('.pid-opt-btn');
+        btns.forEach(b => b.style.pointerEvents = 'none');
+
+        if (choice.isCorrect) {
+            btn.classList.add('correct');
+        } else {
+            btn.classList.add('wrong');
+        }
+
+        // Check if both answered
+        if (teams[0].answered && teams[1].answered) {
+            clearInterval(timerInterval);
+            finishRound();
+        }
+    }
+
+    function evaluateRoundTimeout() {
+        // Disable all buttons on timeout
+        document.querySelectorAll('.pid-opt-btn').forEach(b => b.style.pointerEvents = 'none');
+        finishRound();
+    }
+
+    function finishRound() {
+        const q = rawQuestions[currentQIndex];
+
+        // Process Side 1
+        processSideResult(0, choicesT1, 't1-opts', 't1-fb', 't1-fb-title', 't1-fb-text', q);
+        // Process Side 2
+        processSideResult(1, choicesT2, 't2-opts', 't2-fb', 't2-fb-title', 't2-fb-text', q);
+
+        updateScoresUI();
+        document.getElementById('btn-next-round').style.display = 'inline-block';
+    }
+
+    function processSideResult(teamIdx, choices, containerId, fbId, fbTitleId, fbTextId, q) {
+        const t = teams[teamIdx];
+        const container = document.getElementById(containerId);
+        const btns = container.querySelectorAll('.pid-opt-btn');
+        const fbBox = document.getElementById(fbId);
+        const fbTitle = document.getElementById(fbTitleId);
+        const fbText = document.getElementById(fbTextId);
+
+        // Highlight correct answer for all
+        btns.forEach((btn, i) => {
+            if (choices[i].isCorrect) btn.classList.add('correct');
+        });
+
+        if (t.answered) {
+            if (t.choice.isCorrect) {
+                let pts = (q.babak === 1) ? 10 : 20;
+                t.score += pts;
+                fbTitle.style.color = "#2ecc71";
+                fbTitle.textContent = `BENAR! (+${pts} Poin)`;
+                confetti({ particleCount: 25, spread: 50, origin: { x: teamIdx === 0 ? 0.25 : 0.75 } });
+            } else {
+                let ded = (q.babak === 3) ? 10 : 0;
+                t.score = Math.max(0, t.score - ded);
+                fbTitle.style.color = "#e74c3c";
+                fbTitle.textContent = ded > 0 ? `SALAH! (-${ded} Poin)` : `SALAH! (0 Poin)`;
+            }
+        } else {
+            fbTitle.style.color = "#f39c12";
+            fbTitle.textContent = "WAKTU HABIS!";
+        }
+
+        fbText.textContent = q.fb;
+        fbBox.style.display = 'block';
+    }
+
+    function nextRound() {
+        currentQIndex++;
+        loadQuestionPID();
+    }
+
+    function endGamePID() {
+        showScreen('screen-result');
+        confetti({ particleCount: 200, spread: 120, origin: { y: 0.5 } });
+
+        const sorted = [...teams].sort((a, b) => b.score - a.score);
+        const display = document.getElementById('podium-display');
+        display.innerHTML = '';
+
+        sorted.forEach((t, i) => {
+            const pillar = document.createElement('div');
+            pillar.className = `podium-pillar rank-${i+1}`;
+            pillar.innerHTML = `
+                <div class="pillar-avatar">${t.name.includes('🐯') ? '🐯' : '🦅'}</div>
+                <div class="pillar-name">${t.name}</div>
+                <div class="pillar-score">${t.score} POIN</div>
+                <div style="font-size:1.1rem; font-weight:bold; margin-top:5px;">${i === 0 ? '🏆 JUARA 1' : '🥈 JUARA 2'}</div>
+            `;
+            display.appendChild(pillar);
+        });
+    }
+</script>
+</body>
+</html>
+```
+
+### Keunggulan Game PID Dual-Play ini:
+1. **Split-Screen Dual Player (Sisi Kiri vs Sisi Kanan):** Layar PID terbagi dua secara presisi. Tim A berada di sisi kiri layar dan Tim B di sisi kanan. Kedua tim dapat langsung menekan tombol pilihan jawaban mereka masing-masing secara bersamaan di layar sentuh.
+2. **Tombol Besar & Ramah Sentuhan (PID Optimized):** Desain tombol, teks, dan papan skor dibuat berukuran ekstra besar (*high contrast*) agar mudah dilihat oleh siswa dari baris belakang kelas dan nyaman disentuh jari.
+3. **Papan Balap Koin Real-time di Atas Layar:** Animasi pergerakan avatar (*Tiger 🐯* vs *Eagle 🦅*) di bagian header akan langsung berpacu secara visual tiap kali tim berhasil menambah poin.
+4. **Lengkap 80 Soal Cerdas Cermat:** Memuat seluruh cakupan materi IPAS Fase C (Karhutla, Banjir, Sampah 5R, dan Ekosistem Rantai Makanan).
+
+***
+
+<FollowUp>
+<Suggest>Bagaimana cara mengatur agar tombol jawaban tidak sengaja tertekan dua kali pada layar sentuh PID?</Suggest>
+<Suggest>Apakah ingin ditambahkan fitur suara efek (SFX) saat tombol disentuh atau saat jawaban benar/salah?</Suggest>
+</FollowUp>
+
+<ElicitationsGroup>
+<Elicit>Apakah kamu ingin mengubah nama default kedua tim atau menambah durasi waktu per soal untuk penyesuaian kelas?</Elicit>
+</ElicitationsGroup>
